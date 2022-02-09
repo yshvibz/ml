@@ -1,0 +1,171 @@
+4)decision tree
+
+import pandas as pd
+from pandas import DataFrame
+df_tennis=pd.read_csv('tennis.csv')
+print("\n Given Play Tennis Data Set:\n\n",df_tennis)
+#df_tennis.columns[0]
+df_tennis.keys()[0]
+
+#Function to calculate the entropy of probability of obsercations
+#-p*log2*p
+
+def entropy(probs):
+    import math
+    return sum([-prob*math.log(prob,2) for prob in probs])
+
+#Functions to calculate the entropy of the given data sets/list with respect to target attributes
+
+def entropy_of_list(a_list):
+    from collections import Counter
+    cnt=Counter(x for x in a_list) #counter calculates the proportion of class
+    num_instances=len(a_list)*1.0  #=14
+    print("\n Number of instances for the current sub class is {0}:",format(num_instances))
+    probs=[x/num_instances for x in cnt.values()] # x means no of YES/NO
+    print("\n Classes:",min(cnt),max(cnt))
+    print("\n Probabilities of class {0} is {1}:".format(min(cnt),min(probs)))
+    print("\n Probabilities of class {0} is {1}:".format(max(cnt),max(probs)))
+    return entropy(probs) # call entropy
+    
+    # The initial entropy of the YES/NO attribute for our data set.
+print("\n INPUT DATASET FOR ENTROPY CALCULATION:\n",df_tennis['PlayTennis'])
+
+total_entropy=entropy_of_list(df_tennis['PlayTennis'])
+print("\n Total Entropy of PlayTennis Dataset:",total_entropy)
+
+def information_gain(df, split_attribute_name,target_attribute_name, trace=0):
+    print("Information Gain Calculation of",split_attribute_name)
+    '''
+    Takes a DataFrame of attributes, and quantifies the entropy of a target
+    attribute after performing a split along the values of another attribute.
+    '''
+    # split data by possible vals of Attribute:
+    df_split=df.groupby(split_attribute_name)
+    for name,group in df_split:
+        print("Name:\n",name)
+        print("Group:\n",group)
+        
+    #Calculate entropy for target attribute, as well as proportion of Obs in each data.split
+    nobs=len(df.index)*1.0
+    print("NOBS",nobs)
+    df_agg_ent =df_split.agg({target_attribute_name:[entropy_of_list, lambda x:len(x)/nobs]})[target_attribute_name]
+    print([target_attribute_name])
+    print("Entropy List",entropy_of_list)
+    print("DFAGGENT",df_agg_ent)
+    df_agg_ent.columns=['Entropy','PropObservations']
+    if trace:# helps understand what fxn is doing:
+        print(df_agg_ent)
+    # calculate Information Gain:
+    new_entropy =sum(df_agg_ent['Entropy']*df_agg_ent['PropObservations'])
+    old_entropy=entropy_of_list(df[target_attribute_name])
+    return old_entropy-new_entropy
+
+print('Info-gain for Outlook is:'+str(information_gain(df_tennis,'Outlook','PlayTennis')),"\n")
+print('\n Info-gain for humidity is:'+str(information_gain(df_tennis,'Humidity','PlayTennis')),"\n")
+print('\n Info-gain for Wind is:'+str(information_gain(df_tennis,'Wind','PlayTennis')),"\n")
+print('\nInfo-gain for Temperature is:'+str(information_gain(df_tennis,'Temperature','PlayTennis')),"\n")
+
+def id3(df,target_attribute_name,attribute_names,default_class=None):
+    
+    # tally target attribute:
+    from collections import Counter
+    cnt=Counter(x for x in df[target_attribute_name]) # class for Yes/No
+    
+    ## First check: Is this split of the dataset homogeneous?
+    if len(cnt)==1:
+        return next(iter(cnt))  #next input data set, or raises StopIteration when EOF is hit.
+    
+    ##SEcond check: Is this split of the dataset empty?
+    #if yes, return a default value
+    elif df.empty or (not attribute_names):
+        return default_class # return None for empty Data set
+    
+    ## otherwise: this dataset is ready to be devied up!
+    else:
+        # get default value for next recursive call of this function:
+        default_class=max(cnt.keys()) #No of YES/NO Class
+        # Compute the Information Gain of The attributes:
+        
+        gainz=[information_gain(df,attr,target_attribute_name) for attr in attribute_names] #
+        index_of_max=gainz.index(max(gainz)) # Index of best attribute
+        # Choose best attribute to split on:
+        best_attr=attribute_names[index_of_max]
+        
+        # create an empty tree, to be populated in a moment
+        tree={best_attr:{}} # Initiate the tree with best attribute as a node
+        remaining_attribute_names=[i for i in attribute_names if i !=best_attr]
+        
+        #split dataset
+        # on each split recursively call this algorithm
+        #populate the empty tree with  subtree, which are the result of recursive call
+        
+        for attr_val, data_subset in df.groupby(best_attr):
+            subtree=id3(data_subset, target_attribute_name, remaining_attribute_names,default_class)
+            tree[best_attr][attr_val]=subtree
+        return tree
+    
+#Get predictor names (all but 'class')
+attribute_names=list(df_tennis.columns)
+print("List of Attributes:",attribute_names)
+attribute_names.remove('PlayTennis') #remove the class attribute
+print("Prediction Attributes:",attribute_names)
+
+#Run algorithm:
+ import pprint
+tree=id3(df_tennis,'PlayTennis',attribute_names)
+print("\n\nThe Resultant Decision Tree is:\n")
+#print(tree)
+pprint(tree)
+attribute=next(iter(tree))
+print("Best Attribute:\n",attribute)
+print("Tree Keys:\n",tree[attribute].keys())
+
+
+def classify(instance,tree,default=None): #instance of Play Tennis with Predicted
+    print("Instance:",instance)
+    attribute=next(iter(tree)) #Outlook/Humidity/Wind
+    print("Attribute:",attribute) # [key/Attribute Both as same]
+    
+    #print("Instance of Attribute:",instance[attribute],attribute)
+    if instance[attribute] in tree[attribute].keys(): # value for the attributes in set of tree keys
+        result=tree[attribute][instance[attribute]]
+        print("Instance Attribute:",instance[attribute],"TreeKeys:",tree[attribute].keys())
+        if isinstance(result,dict): # this is a tree, delve deeper
+            return classify(instance,result)
+        else:
+            return result  # this is a label
+        
+    else:
+        return default
+    
+df_tennis['predicted']=df_tennis.apply(classify,axis=1,args=(tree,'No'))
+
+#classify func allows for a default arg: when tree doesnt have anwer for a particular
+#combination of attribute-values, we can use 'no' as the default guess
+
+df_tennis[['PlayTennis','predicted']]
+training_data=df_tennis.iloc[1:-4] # all but last four instances
+test_data=df_tennis.iloc[-4:]#just the last four
+train_tree=id3(training_data,'PlayTennis',attribute_names)
+
+test_data['predicted2']=test_data.apply(classify,axis=1,args=(train_tree,'Yes')) #<--Test data source
+#<--train data source
+print('\n\n Accuracy is:'+str(sum(test_data['PlayTennis']==test_data['predicted2'])/(1.0*len(test_data.index))))    
+
+tennis.csv(textfile)
+
+Outlook,Temperature,Humidity,Wind,PlayTennis
+sunny,hot,high,weak,no
+sunny,hot,high,strong,no
+overcast,hot,high,weak,yes
+rain,mild,high,weak,yes
+rain,cool,normal,weak,yes
+rain,cool,normal,strong,no
+overcast,cool,normal,strong,yes
+sunny,mild,high,weak,no
+sunny,cool,normal,weak,yes
+rain,mild,normal,weak,yes
+sunny,mild,normal,strong,yes
+overcast,mild,high,strong,yes
+overcast,hot,normal,weak,yes
+rain,mild,high,strong,no
