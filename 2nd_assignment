@@ -1,0 +1,28 @@
+GENERAL BOUNDARY
+
+The general boundary G, with respect to hypothesis space H and training data D, is the set of maximally general members of H consistent with D.
+
+G = { g ∈ H ︱ Consistent(g, D) Λ (¬Ǝg' ∈ H) [(g' >g g) Λ Consistent(g', D) ] }
+
+SPECIFIC BOUNDARY
+
+The specific boundary S, with respect to hypothesis space H and training data D, is the set of minimally general (i.e., maximally specific) members of H consistent with D.
+
+S = { s ∈ H ︱ Consistent(s, D) Λ (¬Ǝs' ∈ H) [(s >g s') Λ Consistent(s', D) ] )
+
+As long as the sets G and S are well defined, they completely specify the version space. In particular, we can show that the version space is precisely the set of hypotheses contained in G, plus those contained in S, plus those that lie between G and S in the partially ordered hypothesis space.
+
+Version space representation theorem
+
+Let X be an arbitrary set of instances and let H be a set of boolean-valued hypotheses defined over X. Let c : X → {0, 1} be an arbitrary target concept defined over X, and let D be an arbitrary set of training examples {(x, c(x))}. For all X, H, c, and D such that S and G are well defined,
+
+VSH,D = { h ∈ H︱(Ǝs ∈ S) (Ǝg ∈ G) (g ≥g h ≥g s) }
+
+Proof : To prove the theorem it suffices to show that 
+(1) every h satisfying the righthand side of the above expression is in VSH,D and 
+(2) every member of VSH,D satisfies the right-hand side of the expression. To show 
+(1) let g be an arbitrary member of G, s be an arbitrary member of S, and h be an arbitrary member of H, such that g ≥g h ≥g s. 
+Then by the definition of S, s must be satisfied by all positive examples in D. Because h ≥g s, h must also be satisfied by all positive examples in D. 
+Similarly, by the definition of G, g cannot be satisfied by any negative example in D, and because g ≥g h, h cannot be satisfied by any negative example in D.
+Because h is satisfied by all positive examples in D and by no negative examples in D, h is consistent with D, and therefore h is a member of VSH,D. This proves step (1). 
+The argument for (2) is a bit more complex. It can be proven by assuming some h in VSH,D that does not satisfy the right-hand side of the expression, then showing that this leads to an inconsistency.
